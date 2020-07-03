@@ -4,6 +4,12 @@
     hello world
     <br />
     <input type="text" v-model="msg" />
+    <br />uid :
+    <input type="text" v-model="uid" />
+    <br />toUid
+    <input type="text" v-model="toUid" />
+    <br />
+    <button @click="connect">连接</button>
     <br />
     <button @click="send">send</button>
   </div>
@@ -22,7 +28,9 @@ export default {
     //这里存放数据
     return {
       msg: '哈哈哈哈',
-      myStompClient: null
+      myStompClient: null,
+      uid: null,
+      toUid: null
     }
   },
   //监听属性 类似于data概念
@@ -32,28 +40,47 @@ export default {
   //方法集合
   methods: {
     send() {
-      this.myStompClient.send('/im/im-topic', {})
+      var params = {
+        toUid: this.toUid,
+        content: this.msg
+      }
+      //'/im'对应setApplicationDestinationPrefixes
+      //'send2user' 对应控制器里面MessageMapping
+      this.myStompClient.send('/im/send2user', {}, JSON.stringify(params))
+    },
+    connect() {
+      let socket = new SockJS('http://localhost:8080/im/conn?uid=' + this.uid);
+      let stompClient = Stomp.over(socket);
+      this.myStompClient = stompClient
+      stompClient.connect({}, function (frame) {
+        stompClient.subscribe('/user/msg', function (message) {
+          console.log("订阅个人消息");
+          console.warn(message.body);
+          console.warn(JSON.parse(message.body));
+        });
+      });
     }
   },
   //生命周期 - 创建完成（可以访问当前this实例）
   created() {
-    let socket = new SockJS('http://localhost:8080/im/conn?uid=' + '0772');
-    let stompClient = Stomp.over(socket);
-    this.myStompClient = stompClient
-    stompClient.connect({}, function (frame) {
-      stompClient.subscribe('/user/im-topic', function (message) {
-        console.warn(message.body);
-        console.warn(JSON.parse(message.body));
-      });
-      //'/im'对应setApplicationDestinationPrefixes
-      //'send2user' 对应控制器里面MessageMapping
-      var params = {
-        uid: "0772",
-        toUid: "0772",
-        content: "456465"
-      }
-      stompClient.send('/im/send2user', {}, { msg: params })
-    });
+    // let socket = new SockJS('http://localhost:8080/im/conn?uid=' + '0772');
+    // let stompClient = Stomp.over(socket);
+    // this.myStompClient = stompClient
+    // stompClient.connect({}, function (frame) {
+    //   stompClient.subscribe('/user/msg', function (message) {
+    //     console.warn(message.body);
+    //     console.warn(JSON.parse(message.body));
+    //   });
+
+    //   // var params = {
+    //   //   uid: "0772",
+    //   //   toUid: "0772",
+    //   //   content: "456465"
+    //   // }
+    //   // //'/im'对应setApplicationDestinationPrefixes
+    //   // //'send2user' 对应控制器里面MessageMapping
+    //   // stompClient.send('/im/send2user', {}, JSON.stringify(params))
+    // });
   },
   //生命周期 - 挂载完成（可以访问DOM元素）
   mounted() {
